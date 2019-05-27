@@ -1,5 +1,5 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+/* osgEarth - Geospatial SDK for OpenSceneGraph
 * Copyright 2008-2012 Pelican Mapping
 * http://osgearth.org
 *
@@ -26,7 +26,6 @@
 #include <osgEarth/Capabilities>
 #include <osgEarth/VirtualProgram>
 #include <osgEarth/TerrainEngineNode>
-#include <osgEarth/TerrainTileNode>
 
 #include "BumpMapShaders"
 
@@ -88,6 +87,7 @@ BumpMapTerrainEffect::onInstall(TerrainEngineNode* engine)
 
             // configure shaders
             VirtualProgram* vp = VirtualProgram::getOrCreate(stateset);
+            vp->setName("BumpMap");
 
             Shaders package;            
             package.define( "OE_USE_NORMAL_MAP", false ); //engine->normalTexturesRequired() );

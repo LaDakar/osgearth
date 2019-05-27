@@ -1,6 +1,6 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2016 Pelican Mapping
+/* osgEarth - Geospatial SDK for OpenSceneGraph
+* Copyright 2019 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -159,8 +159,8 @@ _order       ( order ),
 _locator     ( locator ),
 _fallbackData( fallbackData )
 {
-    osg::Texture::FilterMode minFilter = layer->getImageLayerOptions().minFilter().get();
-    osg::Texture::FilterMode magFilter = layer->getImageLayerOptions().magFilter().get();
+    osg::Texture::FilterMode minFilter = layer->options().minFilter().get();
+    osg::Texture::FilterMode magFilter = layer->options().magFilter().get();
 
     if (image->r() <= 1)
     {

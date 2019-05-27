@@ -1,6 +1,6 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2016 Pelican Mapping
+/* osgEarth - Geospatial SDK for OpenSceneGraph
+* Copyright 2019 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -60,6 +60,7 @@ struct MyComputeRangeCallback : public osgEarth::ComputeRangeCallback
             double angularSize = osg::RadiansToDegrees( 2.0*atan(radius/distance) );
             double dpp = osg::maximum(fov, 1.0e-17) / viewPort->height();
             float pixelSize = angularSize / dpp;
+            //OE_NOTICE << "Returning " << pixelSize << std::endl;
             return pixelSize;
         }
 

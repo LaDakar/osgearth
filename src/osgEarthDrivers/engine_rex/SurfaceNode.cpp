@@ -1,5 +1,5 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+/* osgEarth - Geospatial SDK for OpenSceneGraph
 * Copyright 2008-2014 Pelican Mapping
 * http://osgearth.org
 *
@@ -24,6 +24,7 @@
 #include <osgEarth/Registry>
 #include <osgEarth/Horizon>
 #include <osgEarth/ImageUtils>
+#include <osgEarth/LineDrawable>
 
 #include <osg/CullStack>
 #include <osg/Geode>
@@ -45,58 +46,35 @@ using namespace osgEarth;
 
 namespace
 {    
-    osg::Geode* makeBBox(const osg::BoundingBox& bbox, const TileKey& key)
-    {        
-        osg::Geode* geode = new osg::Geode();
+    osg::Node* makeBBox(const osg::BoundingBox& bbox, const TileKey& key)
+    {
+        osg::Group* geode = new osg::Group();
         std::string sizeStr = "(empty)";
         float zpos = 0.0f;
 
         if ( bbox.valid() )
         {
-            osg::Geometry* geom = new osg::Geometry();
-            geom->setName("bbox");
-        
-            osg::Vec3Array* v = new osg::Vec3Array();
-            for(int i=0; i<8; ++i)
-                v->push_back(bbox.corner(i));
-            geom->setVertexArray(v);
+            static const int index[24] = {
+                0,1, 1,3, 3,2, 2,0,
+                0,4, 1,5, 2,6, 3,7,
+                4,5, 5,7, 7,6, 6,4
+            };
 
-            osg::DrawElementsUByte* de = new osg::DrawElementsUByte(GL_LINES);
-
-#if 1
-            // bottom:
-            de->push_back(0); de->push_back(1);
-            de->push_back(1); de->push_back(3);
-            de->push_back(3); de->push_back(2);
-            de->push_back(2); de->push_back(0);
-#endif
-#if 1
-            // top:
-            de->push_back(4); de->push_back(5);
-            de->push_back(5); de->push_back(7);
-            de->push_back(7); de->push_back(6);
-            de->push_back(6); de->push_back(4);
-#endif
-#if 0
-            // corners:
-            de->push_back(0); de->push_back(4);
-            de->push_back(1); de->push_back(5);
-            de->push_back(3); de->push_back(7);
-            de->push_back(2); de->push_back(6);
-#endif
-            geom->addPrimitiveSet(de);
-
-            osg::Vec4Array* c= new osg::Vec4Array();
-            c->push_back(osg::Vec4(1,0,0,1));
-            geom->setColorArray(c);
-            geom->setColorBinding(geom->BIND_OVERALL);
-
-            geode->addDrawable(geom);
-
+            LineDrawable* lines = new LineDrawable(GL_LINES);            
+            for(int i=0; i<24; i+=2)
+            {
+                lines->pushVertex(bbox.corner(index[i]));
+                lines->pushVertex(bbox.corner(index[i+1]));
+            }
+            lines->setColor(osg::Vec4(1,0,0,1));
+            lines->finish();
             sizeStr = Stringify() << key.str() << "\nmax="<<bbox.zMax()<<"\nmin="<<bbox.zMin()<<"\n";
             zpos = bbox.zMax();
+
+            geode->addChild(lines);
         }
 
+#if 0
         osgText::Text* textDrawable = new osgText::Text();
         textDrawable->setDataVariance(osg::Object::DYNAMIC);
         textDrawable->setText( sizeStr );
@@ -109,16 +87,17 @@ namespace
         textDrawable->setBackdropType(textDrawable->OUTLINE);
         textDrawable->setPosition(osg::Vec3(0,0,zpos));
         textDrawable->setAutoRotateToScreen(true);
-        geode->addDrawable(textDrawable);
+        geode->addChild(textDrawable);
+#endif
 
-        geode->getOrCreateStateSet()->setAttributeAndModes(new osg::Program(),0);
-        geode->getOrCreateStateSet()->setMode(GL_LIGHTING,0);
-        geode->getOrCreateStateSet()->setRenderBinDetails(INT_MAX, "DepthSortedBin");
+        //geode->getOrCreateStateSet()->setAttributeAndModes(new osg::Program(),0);
+        //geode->getOrCreateStateSet()->setMode(GL_LIGHTING,0); // ok; ffp debugging code
+        //geode->getOrCreateStateSet()->setRenderBinDetails(INT_MAX, "DepthSortedBin");
 
         return geode;
     }
 
-    osg::Geode* makeSphere(const osg::BoundingSphere& bs)
+    osg::Drawable* makeSphere(const osg::BoundingSphere& bs)
     {
         osg::Geometry* geom = new osg::Geometry();
         geom->setUseVertexBufferObjects(true);
@@ -147,7 +126,7 @@ namespace
         b->push_back(1); b->push_back(5); b->push_back(2);
         geom->addPrimitiveSet(b);
 
-        osg::Vec3Array* n = new osg::Vec3Array();
+        osg::Vec3Array* n = new osg::Vec3Array(osg::Array::BIND_PER_VERTEX);
         n->reserve(6);
         n->push_back(osg::Vec3(0, 0, 1));
         n->push_back(osg::Vec3(0, 0, -1));
@@ -156,20 +135,15 @@ namespace
         n->push_back(osg::Vec3(0, 1, 0));
         n->push_back(osg::Vec3(0, -1, 0));
         geom->setNormalArray(n);
-        geom->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 
         //MeshSubdivider ms;
         //ms.run(*geom, osg::DegreesToRadians(maxAngle), GEOINTERP_GREAT_CIRCLE);
 
-        osg::Vec4Array* c = new osg::Vec4Array(1);
+        osg::Vec4Array* c = new osg::Vec4Array(osg::Array::BIND_OVERALL, 1);
         (*c)[0].set(1,1,0,1);
         geom->setColorArray(c);
-        geom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-        osg::Geode* geode = new osg::Geode();
-        geode->addDrawable(geom);
-
-        return geode;
+        return geom;
     }
 }
 
@@ -188,16 +162,13 @@ HorizonTileCuller::set(const SpatialReference* srs,
     if (_horizon.valid())
     {
         _horizon->setEllipsoid(*srs->getEllipsoid());
-        //_radiusPolar = srs->getEllipsoid()->getRadiusPolar();
-        //_radiusEquator = srs->getEllipsoid()->getRadiusEquator();
-        //_local2world = local2world;
 
         // Adjust the horizon ellipsoid based on the minimum Z value of the tile;
         // necessary because a tile that's below the ellipsoid (ocean floor, e.g.)
         // may be visible even if it doesn't pass the horizon-cone test. In such
         // cases we need a more conservative ellipsoid.
-        double zMin = (double)std::min( bbox.corner(0).z(), 0.0f );
-        zMin = std::max(zMin, -25000.0); // approx the lowest point on earth * 2
+        double zMin = static_cast<double>(osg::minimum( bbox.corner(0).z(), static_cast<osg::BoundingBox::value_type>(0.)));
+        zMin = osg::maximum(zMin, -25000.0); // approx the lowest point on earth * 2
         _horizon->setEllipsoid( osg::EllipsoidModel(
             srs->getEllipsoid()->getRadiusEquator() + zMin, 
             srs->getEllipsoid()->getRadiusPolar() + zMin) );
@@ -208,8 +179,6 @@ HorizonTileCuller::set(const SpatialReference* srs,
         {
             _points[i] = bbox.corner(4+i) * local2world;
         }
-
-        //_bs.set(bbox.center() * _local2world, bbox.radius());
     }
 }
 
@@ -232,7 +201,7 @@ HorizonTileCuller::isVisible(const osg::Vec3d& from) const
 //..............................................................
 
 
-const bool SurfaceNode::_enableDebugNodes = ::getenv("OSGEARTH_MP_DEBUG") != 0L;
+const bool SurfaceNode::_enableDebugNodes = ::getenv("OSGEARTH_REX_DEBUG") != 0L;
 
 SurfaceNode::SurfaceNode(const TileKey&        tilekey,
                          const MapInfo&        mapinfo,
@@ -243,11 +212,8 @@ SurfaceNode::SurfaceNode(const TileKey&        tilekey,
 
     _drawable = drawable;
 
-    _surfaceGeode = new osg::Geode();
-    _surfaceGeode->addDrawable( drawable );
-    
     // Create the final node.
-    addChild( _surfaceGeode.get() );
+    addChild(_drawable.get());
 
     // Establish a local reference frame for the tile:
     GeoPoint centroid;
@@ -259,6 +225,32 @@ SurfaceNode::SurfaceNode(const TileKey&        tilekey,
     
     // Initialize the cached bounding box.
     setElevationRaster( 0L, osg::Matrixf::identity() );
+}
+
+osg::BoundingSphere
+SurfaceNode::computeBound() const
+{
+    osg::Matrix l2w;
+    computeLocalToWorldMatrix(l2w, 0L);
+    osg::BoundingSphere bs;
+    osg::BoundingBox box = _drawable->getBoundingBox();
+    for (unsigned i=0; i<8; ++i)
+        bs.expandBy(box.corner(i)*l2w);
+
+    return bs;
+}
+
+float
+SurfaceNode::getPixelSizeOnScreen(osg::CullStack* cull) const
+{
+    double R = _drawable->getRadius() / 1.4142;
+    return cull->clampedPixelSize(getMatrix().getTrans(), R) / cull->getLODScale();
+}
+
+void
+SurfaceNode::setLastFramePassedCull(unsigned fn)
+{
+    _lastFramePassedCull.exchange(fn);
 }
 
 void
@@ -275,11 +267,7 @@ SurfaceNode::setElevationRaster(const osg::Image*   raster,
     }
 
     // next compute the bounding box in local space:
-#if OSG_VERSION_GREATER_OR_EQUAL(3,3,2)
     const osg::BoundingBox& box = _drawable->getBoundingBox();
-#else
-    const osg::BoundingBox& box = _drawable->getBound();
-#endif
 
     // Compute the medians of each potential child node:
 
@@ -382,18 +370,17 @@ void
 SurfaceNode::addDebugNode(const osg::BoundingBox& box)
 {
     _debugText = 0;
-    _debugGeode = makeBBox(box, _tileKey);
-    //_debugGeode = makeSphere(this->getBound());
-    addChild( _debugGeode.get() );
+    _debugNode = makeBBox(box, _tileKey);
+    addChild( _debugNode.get() );
 }
 
 void
 SurfaceNode::removeDebugNode(void)
 {
     _debugText = 0;
-    if ( _debugGeode.valid() )
+    if ( _debugNode.valid() )
     {
-        removeChild( _debugGeode.get() );
+        removeChild( _debugNode.get() );
     }
 }
 
@@ -410,9 +397,5 @@ SurfaceNode::setDebugText(const std::string& strText)
 const osg::BoundingBox&
 SurfaceNode::getAlignedBoundingBox() const
 {
-#if OSG_VERSION_GREATER_OR_EQUAL(3,3,2)
     return _drawable->getBoundingBox();
-#else
-    return _drawable->getBound();
-#endif
 }

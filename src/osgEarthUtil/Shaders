@@ -1,5 +1,5 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+/* osgEarth - Geospatial SDK for OpenSceneGraph
 * Copyright 2008-2012 Pelican Mapping
 * http://osgearth.org
 *
@@ -46,7 +46,12 @@ namespace osgEarth { namespace Util
             LogDepthBuffer_VertOnly_VertFile,
 
             Shadowing_Vertex,
-            Shadowing_Fragment;
+            Shadowing_Fragment,
+
+            SimpleOceanLayer_Vertex,
+            SimpleOceanLayer_Fragment,
+            
+            RTTPicker;
 	};	
 } } // namespace osgEarth::Util
 

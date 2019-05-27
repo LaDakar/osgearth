@@ -1,6 +1,6 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
- * Copyright 2016 Pelican Mapping
+/* osgEarth - Geospatial SDK for OpenSceneGraph
+ * Copyright 2019 Pelican Mapping
  * http://osgearth.org
  *
  * osgEarth is free software; you can redistribute it and/or modify
@@ -26,13 +26,16 @@ OSGEARTH_REGISTER_SIMPLE_SYMBOL(polygon, PolygonSymbol);
 
 PolygonSymbol::PolygonSymbol(const PolygonSymbol& rhs,const osg::CopyOp& copyop):
 Symbol(rhs, copyop),
-_fill(rhs._fill)
+_fill(rhs._fill),
+_outline(rhs._outline)
 {
+    //nop
 }
 
 PolygonSymbol::PolygonSymbol( const Config& conf ) :
 Symbol( conf ),
-_fill ( Fill() )
+_fill ( Fill() ),
+_outline( true )
 {
     mergeConfig(conf);
 }
@@ -42,14 +45,16 @@ PolygonSymbol::getConfig() const
 {
     Config conf = Symbol::getConfig();
     conf.key() = "polygon";
-    conf.addObjIfSet( "fill", _fill );
+    conf.set( "fill", _fill );
+    conf.set("outline", _outline);
     return conf;
 }
 
 void 
 PolygonSymbol::mergeConfig(const Config& conf )
 {
-    conf.getObjIfSet( "fill", _fill );
+    conf.get( "fill", _fill );
+    conf.get("outline", _outline);
 }
 
 void

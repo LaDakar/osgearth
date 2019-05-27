@@ -1,5 +1,5 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+/* osgEarth - Geospatial SDK for OpenSceneGraph
  * Copyright 2008-2014 Pelican Mapping
  * http://osgearth.org
  *
@@ -21,6 +21,7 @@
 #include <osgEarth/Registry>
 #include <osgEarth/FileUtils>
 #include <osgEarth/GeoData>
+#include <osgEarthFeatures/FeatureCursor>
 #include <osgEarthFeatures/FeatureSource>
 #include <osgEarthFeatures/MVT>
 #include <osgEarthFeatures/Filter>
@@ -63,7 +64,7 @@ public:
         //nop
     }
 
-    FeatureCursor* createFeatureCursor( const Symbology::Query& query )
+    FeatureCursor* createFeatureCursor( const Symbology::Query& query, ProgressCallback* progress )
     {
         if (!query.tileKey().isSet())
         {
@@ -270,7 +271,8 @@ private:
         }
 
 
-        result->setFirstLevel(_minLevel);
+        // Use the max level for now as the min level.
+        result->setFirstLevel(_maxLevel);
         result->setMaxLevel(_maxLevel);
         result->setProfile(profile);
         result->geoInterp() = osgEarth::GEOINTERP_GREAT_CIRCLE;

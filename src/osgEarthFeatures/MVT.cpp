@@ -1,5 +1,5 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+/* osgEarth - Geospatial SDK for OpenSceneGraph
 * Copyright 2008-2014 Pelican Mapping
 * http://osgearth.org
 *
@@ -22,6 +22,7 @@
 #include <osgEarth/FileUtils>
 #include <osgEarth/GeoData>
 #include <osgEarthFeatures/FeatureSource>
+#include <osgDB/Registry>
 #include <list>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,8 @@
 
 using namespace osgEarth;
 using namespace osgEarth::Features;
+
+#define LC "[MVT] "
 
 #define CMD_BITS 3
 #define CMD_MOVETO 1
@@ -104,7 +107,11 @@ Geometry* decodeLine(const mapnik::vector::tile_feature& feature, const TileKey&
 
                 double geoX = key.getExtent().xMin() + (width/(double)tileres) * (double)x;
                 double geoY = key.getExtent().yMax() - (height/(double)tileres) * (double)y;
-                currentLine->push_back(geoX, geoY, 0);
+
+                if (currentLine.valid())
+                {
+                    currentLine->push_back(geoX, geoY, 0);
+                }
             }
         }
     }
@@ -256,9 +263,18 @@ Geometry* decodePolygon(const mapnik::vector::tile_feature& feature, const  Tile
                 else if (orientation == Geometry::ORIENTATION_CCW)
                 // Counter clockwise means a hole, add it to the existing polygon.
                 {
-                    // osgearth orientations are reversed from mvt
-                    currentRing->rewind(Geometry::ORIENTATION_CW);
-                    currentPolygon->getHoles().push_back( currentRing );
+                    if (currentPolygon.valid())
+                    {
+                        // osgearth orientations are reversed from mvt
+                        currentRing->rewind(Geometry::ORIENTATION_CW);
+                        currentPolygon->getHoles().push_back( currentRing );
+                    }
+                    else
+                    {
+                        // this means we encountered a "hole" without a parent outer ring,
+                        // discard for now -gw
+                        OE_INFO << LC << "Discarding improperly wound polygon (hole without an outer ring)\n";
+                    }
                 }
 
                 // Start a new ring
@@ -309,11 +325,12 @@ bool
     }
 
     // Decompress the tile
+    std::string original((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.seekg (0, std::ios::beg);
     std::string value;
-    if ( !compressor->decompress(in, value) )
+    if (!compressor->decompress(in, value))
     {
-        OE_WARN << "Decompression failed" << std::endl;
-        return false;
+        value = original;
     }
 
 
@@ -419,7 +436,7 @@ bool
 
                 if (geometry)
                 {
-                    oeFeature->setGeometry( geometry );
+                    oeFeature->setGeometry( geometry.get() );
                     features.push_back(oeFeature.get());
                 }
             }

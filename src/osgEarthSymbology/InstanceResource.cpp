@@ -1,6 +1,6 @@
 /* -*-c++-*- */
-/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
- * Copyright 2016 Pelican Mapping
+/* osgEarth - Geospatial SDK for OpenSceneGraph
+ * Copyright 2019 Pelican Mapping
  * http://osgearth.org
  *
  * osgEarth is free software; you can redistribute it and/or modify
@@ -42,7 +42,7 @@ Resource( conf )
 void
 InstanceResource::mergeConfig( const Config& conf )
 {
-    conf.getIfSet( "url", _uri );
+    conf.get( "url", _uri );
 }
 
 Config
@@ -51,7 +51,7 @@ InstanceResource::getConfig() const
     Config conf = Resource::getConfig();
     conf.key() = "instance";
 
-    conf.updateIfSet( "url", _uri );
+    conf.set( "url", _uri );
 
     return conf;
 }
